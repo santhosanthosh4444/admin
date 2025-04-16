@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       .from("staffs")
       .insert([
         {
-          name: name, // Default name from email
+          name, // Default name from email
           email,
           password, // In production, hash this password
           role,

@@ -6,7 +6,7 @@ import { cookies } from "next/headers"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   try {
     // Check if user is authenticated
     const cookieStore = await cookies()

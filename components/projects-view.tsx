@@ -106,7 +106,7 @@ export function ProjectsView({ user }: ProjectsViewProps) {
       const endpoint = approvalType === "mentor" ? "/api/projects/approve-mentor" : "/api/projects/approve-hod"
 
       const response = await fetch(endpoint, {
-        method: "GET",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },

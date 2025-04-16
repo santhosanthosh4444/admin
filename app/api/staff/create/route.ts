@@ -69,7 +69,6 @@ export async function POST(request: Request) {
           password, // In production, hash this password
           role,
           department,
-          section,
           ie_allocated,
         },
       ])

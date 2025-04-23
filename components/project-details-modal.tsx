@@ -65,6 +65,13 @@ interface ProjectDetails {
     completed_on: string | null
     result: string | null
     created_at: string
+    attachments?: Array<{
+      id: number
+      review_id: number
+      attachment_name: string | null
+      link: string | null
+      created_at: string
+    }>
   }>
 }
 
@@ -170,7 +177,7 @@ export function ProjectDetailsModal({ isOpen, onClose, projectId }: ProjectDetai
   // Get approval status badge
   const getApprovalBadge = () => {
     if (project.is_hod_approved) {
-      return <Badge>Fully Approved</Badge>
+      return <Badge >Fully Approved</Badge>
     } else if (project.is_approved) {
       return (
         <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
@@ -393,6 +400,7 @@ export function ProjectDetailsModal({ isOpen, onClose, projectId }: ProjectDetai
                         <TableHead>Status</TableHead>
                         <TableHead>Result</TableHead>
                         <TableHead>Completed On</TableHead>
+                        <TableHead>Attachments</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -401,7 +409,7 @@ export function ProjectDetailsModal({ isOpen, onClose, projectId }: ProjectDetai
                           <TableCell className="font-medium">{review.stage}</TableCell>
                           <TableCell>
                             {review.is_completed ? (
-                              <Badge className="flex items-center gap-1 w-fit">
+                              <Badge  className="flex items-center gap-1 w-fit">
                                 <CheckCircle className="h-3 w-3" />
                                 <span>Completed</span>
                               </Badge>
@@ -420,6 +428,32 @@ export function ProjectDetailsModal({ isOpen, onClose, projectId }: ProjectDetai
                               formatDate(review.completed_on)
                             ) : (
                               <span className="text-muted-foreground italic">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {review.attachments && review.attachments.length > 0 ? (
+                              <div className="flex flex-col gap-1">
+                                {review.attachments.map((attachment) => (
+                                  <div key={attachment.id} className="flex items-center">
+                                    {attachment.link ? (
+                                      <a
+                                        href={attachment.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-600 hover:underline"
+                                      >
+                                        {attachment.attachment_name || "View attachment"}
+                                      </a>
+                                    ) : (
+                                      <span className="text-sm text-muted-foreground">
+                                        {attachment.attachment_name || "Unnamed attachment"}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground italic">No attachments</span>
                             )}
                           </TableCell>
                         </TableRow>

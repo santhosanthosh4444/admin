@@ -55,6 +55,13 @@ interface TeamDetails {
     completed_on: string | null
     result: string | null
     created_at: string
+    attachments?: Array<{
+      id: number
+      review_id: number
+      attachment_name: string | null
+      link: string | null
+      created_at: string
+    }>
   }>
   schedules: Array<{
     id: number
@@ -343,6 +350,7 @@ export function TeamDetailsModal({ isOpen, onClose, teamId }: TeamDetailsModalPr
                         <TableHead>Status</TableHead>
                         <TableHead>Result</TableHead>
                         <TableHead>Completed On</TableHead>
+                        <TableHead>Attachments</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -370,6 +378,32 @@ export function TeamDetailsModal({ isOpen, onClose, teamId }: TeamDetailsModalPr
                               formatDate(review.completed_on)
                             ) : (
                               <span className="text-muted-foreground italic">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {review.attachments && review.attachments.length > 0 ? (
+                              <div className="flex flex-col gap-1">
+                                {review.attachments.map((attachment) => (
+                                  <div key={attachment.id} className="flex items-center">
+                                    {attachment.link ? (
+                                      <a
+                                        href={attachment.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-blue-600 hover:underline"
+                                      >
+                                        {attachment.attachment_name || "View attachment"}
+                                      </a>
+                                    ) : (
+                                      <span className="text-sm text-muted-foreground">
+                                        {attachment.attachment_name || "Unnamed attachment"}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground italic">No attachments</span>
                             )}
                           </TableCell>
                         </TableRow>

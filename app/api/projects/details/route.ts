@@ -89,7 +89,23 @@ export async function GET(request: Request) {
           .order("created_at", { ascending: false })
 
         if (!reviewsError && reviewsData) {
-          reviews = reviewsData
+          // For each review, fetch its attachments
+          reviews = await Promise.all(
+            reviewsData.map(async (review) => {
+              const { data: attachments, error: attachmentsError } = await supabase
+                .from("review_attachments")
+                .select("*")
+                .eq("review_id", review.id)
+                .order("created_at", { ascending: false })
+
+              if (attachmentsError) {
+                console.error("Error fetching review attachments:", attachmentsError)
+                return { ...review, attachments: [] }
+              }
+
+              return { ...review, attachments: attachments || [] }
+            }),
+          )
         }
       }
     }

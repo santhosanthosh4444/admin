@@ -69,17 +69,45 @@ export async function GET(request: Request) {
       .eq("team_id", teamId)
       .order("created_at", { ascending: false })
 
-    if (reviewsError) {
-      console.error("Error fetching team reviews:", reviewsError)
-      // Continue without reviews data
-    }
-
     // Fetch project review schedules for this team's department
     const { data: schedules, error: schedulesError } = await supabase
       .from("project_review")
       .select("*")
       .eq("department", team.department)
       .order("created_at", { ascending: false })
+
+    if (!reviewsError && reviews) {
+      // For each review, fetch its attachments
+      const reviewsWithAttachments = await Promise.all(
+        reviews.map(async (review) => {
+          const { data: attachments, error: attachmentsError } = await supabase
+            .from("review_attachments")
+            .select("*")
+            .eq("review_id", review.id)
+            .order("created_at", { ascending: false })
+
+          if (attachmentsError) {
+            console.error("Error fetching review attachments:", attachmentsError)
+            return { ...review, attachments: [] }
+          }
+
+          return { ...review, attachments: attachments || [] }
+        }),
+      )
+
+      return NextResponse.json({
+        team,
+        teamLead,
+        mentor,
+        reviews: reviewsWithAttachments,
+        schedules: schedules || [],
+      })
+    }
+
+    if (reviewsError) {
+      console.error("Error fetching team reviews:", reviewsError)
+      // Continue without reviews data
+    }
 
     if (schedulesError) {
       console.error("Error fetching project schedules:", schedulesError)

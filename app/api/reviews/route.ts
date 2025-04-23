@@ -69,7 +69,7 @@ export async function GET() {
       return NextResponse.json({ message: "Failed to fetch reviews" }, { status: 500 })
     }
 
-    // Fetch team information for each review
+    // Fetch attachments for each review
     const transformedReviews = await Promise.all(
       reviews.map(async (review) => {
         let teamInfo = {
@@ -110,6 +110,17 @@ export async function GET() {
           }
         }
 
+        // Fetch attachments for this review
+        const { data: attachments, error: attachmentsError } = await supabase
+          .from("review_attachments")
+          .select("*")
+          .eq("review_id", review.id)
+          .order("created_at", { ascending: false })
+
+        if (attachmentsError) {
+          console.error("Error fetching review attachments:", attachmentsError)
+        }
+
         return {
           id: review.id,
           team_id: review.team_id,
@@ -124,6 +135,7 @@ export async function GET() {
           team_section: teamInfo.section,
           team_lead_id: teamInfo.team_lead,
           team_lead_name: teamInfo.team_lead_name,
+          attachments: attachments || [],
         }
       }),
     )

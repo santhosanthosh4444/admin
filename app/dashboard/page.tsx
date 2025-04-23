@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CalendarIcon, Users, Star, Home, LogOut, UserPlus, FolderKanban } from "lucide-react"
+import { CalendarIcon, Users, Star, Home, LogOut, UserPlus, FolderKanban, ClipboardList } from "lucide-react"
 import { Toaster, toast } from "react-hot-toast"
 import {
   Dialog,
@@ -33,6 +33,8 @@ import { TeamsView } from "@/components/teams-view"
 import { ReviewsView } from "@/components/reviews-view"
 import { AddStaffView } from "@/components/add-staff-view"
 import { ProjectsView } from "@/components/projects-view"
+import { PendingLogsView } from "@/components/pending-logs-view"
+import { LogsView } from "@/components/logs-view"
 
 interface User {
   id: number
@@ -44,7 +46,8 @@ interface User {
   section: string
 }
 
-export type ActiveView = "dashboard" | "teams" | "reviews" | "add-staff" | "projects"
+// Update the ActiveView type to include "logs"
+export type ActiveView = "dashboard" | "teams" | "reviews" | "add-staff" | "projects" | "logs"
 
 export default function Dashboard() {
   const router = useRouter()
@@ -177,7 +180,7 @@ export default function Dashboard() {
     return <div className="flex justify-center items-center h-screen">Loading...</div>
   }
 
-  // Menu items for the sidebar
+  // Add the logs menu item to the menuItems array
   const menuItems = [
     {
       title: "Dashboard",
@@ -204,9 +207,16 @@ export default function Dashboard() {
       icon: UserPlus,
       view: "add-staff" as ActiveView,
     },
+    {
+      title: "Logs",
+      icon: ClipboardList,
+      view: "logs" as ActiveView,
+    },
+    // Add the logs menu item (only visible for PROJECT_MENTOR role)
+   
   ]
 
-  // Render the appropriate content based on the active view
+  // Update the renderContent function to include the logs view
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
@@ -256,6 +266,13 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Only show pending logs for PROJECT_MENTOR role */}
+            {user.role === "PROJECT_MENTOR" && (
+              <div className="mb-8">
+                <PendingLogsView />
+              </div>
+            )}
           </>
         )
       case "teams":
@@ -266,6 +283,8 @@ export default function Dashboard() {
         return <AddStaffView />
       case "projects":
         return <ProjectsView user={user} />
+      case "logs":
+        return <LogsView user={user} />
       default:
         return null
     }

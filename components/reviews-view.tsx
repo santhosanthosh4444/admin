@@ -32,6 +32,13 @@ interface Review {
   team_topic?: string
   team_section?: string
   mentor_id?: string
+  attachments?: Array<{
+    id: number
+    review_id: number
+    attachment_name: string | null
+    link: string | null
+    created_at: string
+  }>
 }
 
 interface Schedule {
@@ -300,7 +307,7 @@ export function ReviewsView() {
                       {user?.role === "HOD" && <TableCell>{review.team_section || "N/A"}</TableCell>}
                       <TableCell>
                         {review.is_completed ? (
-                          <Badge className="flex items-center gap-1 w-fit">
+                          <Badge  className="flex items-center gap-1 w-fit">
                             <CheckCircle className="h-3 w-3" />
                             <span>Completed</span>
                           </Badge>
@@ -382,6 +389,30 @@ export function ReviewsView() {
                 </SelectContent>
               </Select>
             </div>
+            {selectedReview?.attachments && selectedReview.attachments.length > 0 && (
+              <div className="space-y-2">
+                <Label>Attachments</Label>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto p-2 border rounded-md">
+                  {selectedReview.attachments.map((attachment) => (
+                    <div key={attachment.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                      <span className="text-sm font-medium truncate flex-1">
+                        {attachment.attachment_name || "Unnamed attachment"}
+                      </span>
+                      {attachment.link && (
+                        <a
+                          href={attachment.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline ml-2"
+                        >
+                          View
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

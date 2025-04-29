@@ -72,6 +72,7 @@ interface ProjectDetails {
       link: string | null
       created_at: string
     }>
+    marks: number | null
   }>
 }
 
@@ -399,6 +400,7 @@ export function ProjectDetailsModal({ isOpen, onClose, projectId }: ProjectDetai
                         <TableHead>Stage</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Result</TableHead>
+                        <TableHead>Marks</TableHead>
                         <TableHead>Completed On</TableHead>
                         <TableHead>Attachments</TableHead>
                       </TableRow>
@@ -422,6 +424,13 @@ export function ProjectDetailsModal({ isOpen, onClose, projectId }: ProjectDetai
                           </TableCell>
                           <TableCell>
                             {review.result || <span className="text-muted-foreground italic">Not evaluated</span>}
+                          </TableCell>
+                          <TableCell>
+                            {review.marks !== null ? (
+                              `${review.marks}/100`
+                            ) : (
+                              <span className="text-muted-foreground italic">-</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {review.completed_on ? (

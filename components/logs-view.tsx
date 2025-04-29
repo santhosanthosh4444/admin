@@ -291,7 +291,6 @@ export function LogsView({ user }: LogsViewProps) {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     {selectedStudentId === "all" && <TableHead>Student</TableHead>}
-                    <TableHead>Team</TableHead>
                     <TableHead>Expected Task</TableHead>
                     <TableHead>Completed Task</TableHead>
                     <TableHead>Status</TableHead>
@@ -310,17 +309,7 @@ export function LogsView({ user }: LogsViewProps) {
                           </div>
                         </TableCell>
                       )}
-                      <TableCell>
-                        {log.team_topic ? (
-                          <div>
-                            <p>{log.team_topic}</p>
-                            {log.team_code && <p className="text-xs text-muted-foreground">Code: {log.team_code}</p>}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground italic">Unknown Team</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
+                          <TableCell>
                         <div className="max-w-[200px] truncate" title={log.expected_task ?? ""}>
                           {log.expected_task || <span className="text-muted-foreground italic">Not specified</span>}
                         </div>

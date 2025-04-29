@@ -84,7 +84,7 @@ export async function GET(request: Request) {
     // Fetch student details
     const { data: student, error: studentError } = await supabase
       .from("students")
-      .select("student_id, name, email, department, section")
+      .select("student_id, name, department, section")
       .eq("student_id", studentId)
       .single()
 

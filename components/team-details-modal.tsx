@@ -54,6 +54,7 @@ interface TeamDetails {
     is_completed: boolean
     completed_on: string | null
     result: string | null
+    marks: number | null
     created_at: string
     attachments?: Array<{
       id: number
@@ -349,6 +350,7 @@ export function TeamDetailsModal({ isOpen, onClose, teamId }: TeamDetailsModalPr
                         <TableHead>Stage</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Result</TableHead>
+                        <TableHead>Marks</TableHead>
                         <TableHead>Completed On</TableHead>
                         <TableHead>Attachments</TableHead>
                       </TableRow>
@@ -372,6 +374,13 @@ export function TeamDetailsModal({ isOpen, onClose, teamId }: TeamDetailsModalPr
                           </TableCell>
                           <TableCell>
                             {review.result || <span className="text-muted-foreground italic">Not evaluated</span>}
+                          </TableCell>
+                          <TableCell>
+                            {review.marks !== null ? (
+                              `${review.marks}/100`
+                            ) : (
+                              <span className="text-muted-foreground italic">-</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {review.completed_on ? (

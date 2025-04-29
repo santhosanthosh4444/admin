@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertCircle, CheckCircle, Clock, FileText } from "lucide-react"
 import { toast } from "react-hot-toast"
+import { Input } from "@/components/ui/input"
 
 interface Review {
   id: number
@@ -28,6 +29,7 @@ interface Review {
   completed_on: string | null
   result: string | null
   created_at: string
+  team_lead_name?: string
   team_name?: string
   team_topic?: string
   team_section?: string
@@ -39,6 +41,7 @@ interface Review {
     link: string | null
     created_at: string
   }>
+  marks?: number | null
 }
 
 interface Schedule {
@@ -64,6 +67,7 @@ export function ReviewsView() {
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false)
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
   const [result, setResult] = useState("")
+  const [marks, setMarks] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [user, setUser] = useState<User | null>(null)
 
@@ -125,6 +129,7 @@ export function ReviewsView() {
   const handleOpenUpdateDialog = (review: Review) => {
     setSelectedReview(review)
     setResult(review.result || "")
+    setMarks(review.marks ? review.marks.toString() : "")
     setIsUpdateDialogOpen(true)
   }
 
@@ -133,6 +138,13 @@ export function ReviewsView() {
     if (!selectedReview) return
     if (!result) {
       toast.error("Please enter a result")
+      return
+    }
+
+    // Validate marks
+    const marksValue = marks ? Number.parseInt(marks, 10) : null
+    if (marks && (isNaN(marksValue!) || marksValue! < 0 || marksValue! > 100)) {
+      toast.error("Marks must be a number between 0 and 100")
       return
     }
 
@@ -147,6 +159,7 @@ export function ReviewsView() {
         body: JSON.stringify({
           review_id: selectedReview.id,
           result,
+          marks: marksValue,
           is_completed: true,
         }),
       })
@@ -289,11 +302,12 @@ export function ReviewsView() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[30%]">Team</TableHead>
+                    <TableHead className="w-[30%]">Team Lead</TableHead>
                     <TableHead className="w-[15%]">Department</TableHead>
                     {user?.role === "HOD" && <TableHead className="w-[10%]">Section</TableHead>}
                     <TableHead className="w-[15%]">Status</TableHead>
-                    <TableHead className="w-[20%]">Result</TableHead>
+                    <TableHead className="w-[15%]">Result</TableHead>
+                    <TableHead className="w-[10%]">Marks</TableHead>
                     <TableHead className="w-[10%]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -301,7 +315,7 @@ export function ReviewsView() {
                   {stageReviews.map((review) => (
                     <TableRow key={review.id}>
                       <TableCell className="font-medium">
-                        {review.team_topic || review.team_name || `Team ID: ${review.team_id.substring(0, 8)}...`}
+                        {review.team_lead_name || review.team_name || `Team ID: ${review.team_id.substring(0, 8)}...`}
                       </TableCell>
                       <TableCell>{review.department}</TableCell>
                       {user?.role === "HOD" && <TableCell>{review.team_section || "N/A"}</TableCell>}
@@ -323,6 +337,13 @@ export function ReviewsView() {
                           review.result
                         ) : (
                           <span className="text-muted-foreground italic">Not evaluated</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {review.marks !== null ? (
+                          `${review.marks}/100`
+                        ) : (
+                          <span className="text-muted-foreground italic">-</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -389,6 +410,20 @@ export function ReviewsView() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="marks">Marks (out of 100)</Label>
+              <Input
+                id="marks"
+                type="number"
+                min="0"
+                max="100"
+                value={marks}
+                onChange={(e) => setMarks(e.target.value)}
+                placeholder="Enter marks out of 100"
+              />
+            </div>
+
             {selectedReview?.attachments && selectedReview.attachments.length > 0 && (
               <div className="space-y-2">
                 <Label>Attachments</Label>

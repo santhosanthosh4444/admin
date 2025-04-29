@@ -129,6 +129,7 @@ export async function GET() {
           is_completed: review.is_completed,
           completed_on: review.completed_on,
           result: review.result,
+          marks: review.marks,
           created_at: review.created_at,
           team_topic: teamInfo.topic,
           team_code: teamInfo.code,

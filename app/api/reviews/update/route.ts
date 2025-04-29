@@ -6,6 +6,7 @@ import { cookies } from "next/headers"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+// Update the PATCH function to handle marks
 export async function PATCH(request: Request) {
   try {
     // Get session cookie to verify authentication
@@ -28,7 +29,7 @@ export async function PATCH(request: Request) {
     const { role, staffId } = session
 
     // Parse request body
-    const { review_id, result, is_completed } = await request.json()
+    const { review_id, result, marks, is_completed } = await request.json()
 
     if (!review_id) {
       return NextResponse.json({ message: "Review ID is required" }, { status: 400 })
@@ -56,6 +57,10 @@ export async function PATCH(request: Request) {
 
     if (result !== undefined) {
       updateData.result = result
+    }
+
+    if (marks !== undefined) {
+      updateData.marks = marks
     }
 
     if (is_completed !== undefined) {

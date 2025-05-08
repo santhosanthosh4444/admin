@@ -154,7 +154,6 @@ export function PendingLogsView() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Student</TableHead>
-                  <TableHead>Team</TableHead>
                   <TableHead>Expected Task</TableHead>
                   <TableHead>Completed Task</TableHead>
                   <TableHead>Actions</TableHead>
@@ -170,16 +169,7 @@ export function PendingLogsView() {
                         {log.student_email && <p className="text-xs text-muted-foreground">{log.student_email}</p>}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {log.team_topic ? (
-                        <div>
-                          <p>{log.team_topic}</p>
-                          {log.team_code && <p className="text-xs text-muted-foreground">Code: {log.team_code}</p>}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground italic">Unknown Team</span>
-                      )}
-                    </TableCell>
+          
                     <TableCell>
                       <div className="max-w-[200px] truncate" title={log.expected_task || ""}>
                         {log.expected_task || <span className="text-muted-foreground italic">Not specified</span>}

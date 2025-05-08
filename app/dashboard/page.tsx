@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CalendarIcon, Users, Star, Home, LogOut, UserPlus, FolderKanban, ClipboardList, FileText } from "lucide-react"
+import { CalendarIcon, Users, Star, Home, LogOut, UserPlus, FolderKanban, ClipboardList } from "lucide-react"
 import { Toaster, toast } from "react-hot-toast"
 import {
   Dialog,
@@ -52,8 +52,6 @@ interface Team {
   topic?: string
   department?: string
   section?: string
-  team_lead_name?: string
-  // Add other team properties as needed
 }
 
 // Update the ActiveView type to include "logs"
@@ -69,12 +67,19 @@ export default function Dashboard() {
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [teams, setTeams] = useState<Team[]>([])
-  const [selectedTeam, setSelectedTeam] = useState("")
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false)
+  const [teams, setTeams] = useState<Team[]>([])
+  const [selectedTeamId, setSelectedTeamId] = useState("")
+  const [isLoadingTeams, setIsLoadingTeams] = useState(false)
 
   const DEPARTMENTS = ["CSE", "ECE", "IT", "MECH", "CSBS", "AIDS"]
   const STAGES = ["Review 1", "Review 2", "Review 3", "Final Review"]
+
+  // Helper function to check if a user has a specific role
+  const hasRole = (userRole: string, roleToCheck: string) => {
+    if (!userRole) return false
+    return userRole.includes(roleToCheck)
+  }
 
   useEffect(() => {
     // Check if user is logged in
@@ -92,38 +97,41 @@ export default function Dashboard() {
       if (parsedUser.department) {
         setDepartment(parsedUser.department)
       }
-
-      // Fetch teams if user is a PROJECT_MENTOR
-      if (parsedUser.role === "PROJECT_MENTOR") {
-        fetchTeams(parsedUser.id)
-      }
     } catch (error) {
       console.error("Failed to parse user data:", error)
       router.push("/")
     }
   }, [router])
 
-  const fetchTeams = async (mentorId: number) => {
+  const fetchTeams = async () => {
+    if (!user) return
+
+    setIsLoadingTeams(true)
     try {
-      const response = await fetch(`/api/teams?mentorId=${mentorId}`)
+      const response = await fetch(`/api/teams?mentorId=${user.staff_id}`)
       if (!response.ok) {
         throw new Error("Failed to fetch teams")
       }
 
       const data = await response.json()
+      const teamsArray = Array.isArray(data.teams) ? data.teams : []
+      setTeams(teamsArray)
 
-      // Ensure teams is always an array
-      if (Array.isArray(data)) {
-        setTeams(data)
-      } else if (data && typeof data === "object" && data.teams && Array.isArray(data.teams)) {
-        setTeams(data.teams)
-      } else {
-        console.error("Unexpected teams data format:", data)
-        setTeams([])
+      if (teamsArray.length === 0) {
+        toast.error("No teams found for this mentor")
       }
     } catch (error) {
       console.error("Error fetching teams:", error)
-      setTeams([])
+      toast.error("Failed to load teams")
+    } finally {
+      setIsLoadingTeams(false)
+    }
+  }
+
+  const handleGenerateDiary = () => {
+    if (hasRole(user?.role || "", "PROJECT_MENTOR")) {
+      fetchTeams()
+      setIsTeamDialogOpen(true)
     }
   }
 
@@ -218,16 +226,9 @@ export default function Dashboard() {
     }
   }
 
-  const openTeamSelectionDialog = () => {
-    setIsTeamDialogOpen(true)
-  }
-
   if (!user) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>
   }
-
-  // Ensure teams is always an array
-  const teamsArray = Array.isArray(teams) ? teams : []
 
   // Add the logs menu item to the menuItems array
   const menuItems = [
@@ -257,7 +258,7 @@ export default function Dashboard() {
       view: "add-staff" as ActiveView,
     },
     // Add the logs menu item (only visible for PROJECT_MENTOR role)
-    ...(user?.role === "PROJECT_MENTOR"
+    ...(hasRole(user.role, "PROJECT_MENTOR")
       ? [
           {
             title: "Logs",
@@ -280,13 +281,14 @@ export default function Dashboard() {
                 <p className="text-muted-foreground">Welcome back, {user.name}</p>
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => setIsScheduleDialogOpen(true)} className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  Schedule Review
-                </Button>
-                {user.role === "PROJECT_MENTOR" && (
-                  <Button onClick={openTeamSelectionDialog} className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
+                {hasRole(user.role, "PROJECT_MENTOR") && (
+                  <Button onClick={() => setIsScheduleDialogOpen(true)} className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    Schedule Review
+                  </Button>
+                )}
+                {hasRole(user.role, "PROJECT_MENTOR") && (
+                  <Button onClick={handleGenerateDiary} className="flex items-center gap-2">
                     Generate Diary
                   </Button>
                 )}
@@ -328,7 +330,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Only show pending logs for PROJECT_MENTOR role */}
-            {user.role === "PROJECT_MENTOR" && (
+            {hasRole(user.role, "PROJECT_MENTOR") && (
               <div className="mb-8">
                 <PendingLogsView />
               </div>
@@ -486,45 +488,41 @@ export default function Dashboard() {
           <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Generate Project Diary</DialogTitle>
-                <DialogDescription>Select a team to generate a project diary.</DialogDescription>
+                <DialogTitle>Generate Diary</DialogTitle>
+                <DialogDescription>Select a team to generate a diary.</DialogDescription>
               </DialogHeader>
 
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
                   <Label htmlFor="team">Team</Label>
-                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
                     <SelectTrigger id="team">
-                      <SelectValue placeholder="Select a team" />
+                      <SelectValue placeholder="Select team" />
                     </SelectTrigger>
                     <SelectContent>
-                      {teamsArray.map((team) => (
-                        <SelectItem key={team.team_id} value={team.team_id}>
-                          {team.team_lead_name || `Team ${team.team_id}`}
-                        </SelectItem>
-                      ))}
+                      {Array.isArray(teams) &&
+                        teams.map((team) => (
+                          <SelectItem key={team.team_id} value={team.team_id}>
+                            {team.topic || `Team ${team.team_id.substring(0, 8)}`}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {teamsArray.length === 0 && (
-                  <div className="bg-muted p-3 rounded-md mt-2">
-                    <p className="text-sm font-medium">No Teams Found</p>
-                    <p className="text-sm text-muted-foreground">
-                      You don't have any teams assigned to you. Please contact the administrator if you believe this is
-                      an error.
-                    </p>
-                  </div>
-                )}
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsTeamDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsTeamDialogOpen(false)}
+                  disabled={isLoadingTeams}
+                >
                   Cancel
                 </Button>
                 <DiaryGenerator
-                  teamId={selectedTeam}
-                  teamName={teamsArray.find((t) => t.team_id === selectedTeam)?.topic}
+                  teamId={selectedTeamId}
+                  teamName={teams.find((t) => t.team_id === selectedTeamId)?.topic || ""}
                 />
               </DialogFooter>
             </DialogContent>

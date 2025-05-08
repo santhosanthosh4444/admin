@@ -8,7 +8,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { StaffCredentials } from "./add-staff-view"
+
+// Define the StaffCredentials interface directly in this file
+interface StaffCredentials {
+  email: string
+  password: string
+  role: string
+  department: string | null
+  section: string | null
+}
 
 interface AddStaffFormProps {
   onSuccess: (credentials: StaffCredentials) => void
@@ -18,7 +26,6 @@ const DEPARTMENTS = ["CSE", "ECE", "IT", "MECH", "CSBS", "AIDS"]
 const SECTIONS = ["A", "B"]
 
 export function AddStaffForm({ onSuccess }: AddStaffFormProps) {
-  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [role, setRole] = useState("")
   const [department, setDepartment] = useState("")
@@ -55,12 +62,12 @@ export function AddStaffForm({ onSuccess }: AddStaffFormProps) {
     }
 
     // Role-specific validation
-    if (role === "HOD" && !department) {
+    if (role.includes("HOD") && !department) {
       toast.error("Please select a department")
       return
     }
 
-    if (role === "CLASS_ADVISOR" && (!department || !section)) {
+    if (role.includes("CLASS_ADVISOR") && (!department || !section)) {
       toast.error("Please select both department and section")
       return
     }
@@ -78,12 +85,11 @@ export function AddStaffForm({ onSuccess }: AddStaffFormProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
           email,
           password: generatedPassword,
           role,
-          department: ["HOD", "CLASS_ADVISOR"].includes(role) ? department : null,
-          section: role === "CLASS_ADVISOR" ? section : null,
+          department: role.includes("HOD") || role.includes("CLASS_ADVISOR") ? department : null,
+          section: role.includes("CLASS_ADVISOR") ? section : null,
           ie_allocated: false, // Default value
         }),
       })
@@ -98,16 +104,14 @@ export function AddStaffForm({ onSuccess }: AddStaffFormProps) {
 
       // Call the success callback with the credentials
       onSuccess({
-        name,
         email,
         password: generatedPassword,
         role,
-        department: ["HOD", "CLASS_ADVISOR"].includes(role) ? department : null,
-        section: role === "CLASS_ADVISOR" ? section : null,
+        department: role.includes("HOD") || role.includes("CLASS_ADVISOR") ? department : null,
+        section: role.includes("CLASS_ADVISOR") ? section : null,
       })
 
       // Reset the form
-      setName("")
       setEmail("")
       setRole("")
       setDepartment("")
@@ -120,25 +124,13 @@ export function AddStaffForm({ onSuccess }: AddStaffFormProps) {
   }
 
   // Determine if department field should be shown
-  const showDepartment = role === "HOD" || role === "CLASS_ADVISOR"
+  const showDepartment = role.includes("HOD") || role.includes("CLASS_ADVISOR")
 
   // Determine if section field should be shown
-  const showSection = role === "CLASS_ADVISOR"
+  const showSection = role.includes("CLASS_ADVISOR")
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
-        <Input
-          id="name"
-          type="name"
-          placeholder="Mr. John Doe"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          disabled={isLoading}
-          required
-        />
-      </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -162,6 +154,8 @@ export function AddStaffForm({ onSuccess }: AddStaffFormProps) {
             <SelectItem value="PROJECT_MENTOR">Project Mentor</SelectItem>
             <SelectItem value="CLASS_ADVISOR">Class Advisor</SelectItem>
             <SelectItem value="HOD">Head of Department</SelectItem>
+            <SelectItem value="HOD+PROJECT_MENTOR">HOD + Project Mentor</SelectItem>
+            <SelectItem value="CLASS_ADVISOR+PROJECT_MENTOR">Class Advisor + Project Mentor</SelectItem>
           </SelectContent>
         </Select>
       </div>

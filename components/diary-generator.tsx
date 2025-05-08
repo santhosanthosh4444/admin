@@ -131,7 +131,7 @@ export function DiaryGenerator({ teamId, teamName }: DiaryGeneratorProps) {
 
       // Create PDF
       const pdf = new jsPDF() as ExtendedJsPDF
-      const headerImageUrl = "https://ik.imagekit.io/rdunkpgr8/image.png" // This should be the path to your header image
+      const headerImageUrl = "https://ik.imagekit.io/rdunkpgr8/image.png"
 
       // Function to add header to each page
       const addHeader = () => {

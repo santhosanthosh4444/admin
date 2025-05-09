@@ -16,9 +16,12 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertCircle, CheckCircle, Clock, FileText } from "lucide-react"
+import { AlertCircle, CheckCircle, Clock, FileText, Upload } from "lucide-react"
 import { toast } from "react-hot-toast"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TemplateUpload } from "@/components/template-upload-dialog"
+import { TemplatesList } from "@/components/templates-list"
 
 interface Review {
   id: number
@@ -70,6 +73,9 @@ export function ReviewsView() {
   const [marks, setMarks] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [user, setUser] = useState<User | null>(null)
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
+  const [currentStage, setCurrentStage] = useState("")
+  const [refreshTemplates, setRefreshTemplates] = useState(0)
 
   // Get user info on component mount
   useEffect(() => {
@@ -179,6 +185,17 @@ export function ReviewsView() {
     }
   }
 
+  // Open upload dialog for a specific stage
+  const openUploadDialog = (stage: string) => {
+    setCurrentStage(stage)
+    setIsUploadDialogOpen(true)
+  }
+
+  // Handle template upload success
+  const handleTemplateUploadSuccess = () => {
+    setRefreshTemplates((prev) => prev + 1)
+  }
+
   // Group reviews by stage
   const reviewsByStage = reviews.reduce(
     (acc, review) => {
@@ -200,8 +217,9 @@ export function ReviewsView() {
     return now >= start && now <= end
   })
 
-  // Check if user can evaluate reviews
-  const canEvaluateReviews = user && (user.role === "HOD" || user.role === "PROJECT_MENTOR")
+  // Check if user can evaluate reviews or upload templates
+  const canEvaluateReviews = user && (user.role.includes("HOD") || user.role.includes("PROJECT_MENTOR"))
+  const canUploadTemplates = Boolean(user && (user.role.includes("HOD") || user.role.includes("PROJECT_MENTOR")))
 
   // Render loading skeleton
   if (isLoading) {
@@ -233,11 +251,11 @@ export function ReviewsView() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Reviews</h1>
         <p className="text-muted-foreground">
-          {user?.role === "HOD"
+          {user?.role.includes("HOD")
             ? `Reviews for all teams in ${user.department} department`
-            : user?.role === "CLASS_ADVISOR"
+            : user?.role.includes("CLASS_ADVISOR")
               ? `Reviews for teams in ${user.department} department, Section ${user.section}`
-              : user?.role === "PROJECT_MENTOR"
+              : user?.role.includes("PROJECT_MENTOR")
                 ? "Reviews for teams you are mentoring"
                 : "View and manage performance reviews"}
         </p>
@@ -281,9 +299,9 @@ export function ReviewsView() {
             <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-1">No reviews found</h3>
             <p className="text-sm text-muted-foreground text-center max-w-md">
-              {user?.role === "PROJECT_MENTOR"
+              {user?.role.includes("PROJECT_MENTOR")
                 ? "There are no reviews scheduled for teams you are mentoring."
-                : user?.role === "CLASS_ADVISOR"
+                : user?.role.includes("CLASS_ADVISOR")
                   ? `There are no reviews scheduled for teams in ${user.department} department, Section ${user.section}.`
                   : "There are no reviews scheduled yet. Use the 'Schedule Review' button on the dashboard to create reviews."}
             </p>
@@ -293,76 +311,111 @@ export function ReviewsView() {
         Object.entries(reviewsByStage).map(([stage, stageReviews]) => (
           <Card key={stage} className="mb-6">
             <CardHeader>
-              <CardTitle>{stage}</CardTitle>
-              <CardDescription>
-                {stageReviews.filter((r) => r.is_completed).length} of {stageReviews.length} reviews completed
-              </CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>{stage}</CardTitle>
+                  <CardDescription>
+                    {stageReviews.filter((r) => r.is_completed).length} of {stageReviews.length} reviews completed
+                  </CardDescription>
+                </div>
+                {canUploadTemplates && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openUploadDialog(stage)}
+                    className="flex items-center gap-1"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload Template
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[30%]">Team Lead</TableHead>
-                    <TableHead className="w-[15%]">Department</TableHead>
-                    {user?.role === "HOD" && <TableHead className="w-[10%]">Section</TableHead>}
-                    <TableHead className="w-[15%]">Status</TableHead>
-                    <TableHead className="w-[15%]">Result</TableHead>
-                    <TableHead className="w-[10%]">Marks</TableHead>
-                    <TableHead className="w-[10%]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stageReviews.map((review) => (
-                    <TableRow key={review.id}>
-                      <TableCell className="font-medium">
-                        {review.team_lead_name || review.team_name || `Team ID: ${review.team_id.substring(0, 8)}...`}
-                      </TableCell>
-                      <TableCell>{review.department}</TableCell>
-                      {user?.role === "HOD" && <TableCell>{review.team_section || "N/A"}</TableCell>}
-                      <TableCell>
-                        {review.is_completed ? (
-                          <Badge  className="flex items-center gap-1 w-fit">
-                            <CheckCircle className="h-3 w-3" />
-                            <span>Completed</span>
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="flex items-center gap-1 w-fit">
-                            <Clock className="h-3 w-3" />
-                            <span>Pending</span>
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {review.result ? (
-                          review.result
-                        ) : (
-                          <span className="text-muted-foreground italic">Not evaluated</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {review.marks !== null ? (
-                          `${review.marks}/100`
-                        ) : (
-                          <span className="text-muted-foreground italic">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {canEvaluateReviews && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            onClick={() => handleOpenUpdateDialog(review)}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            {review.is_completed ? "Update" : "Evaluate"}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Tabs defaultValue="reviews">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                  <TabsTrigger value="templates">Templates</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="reviews">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[30%]">Team Lead</TableHead>
+                        <TableHead className="w-[15%]">Department</TableHead>
+                        {user?.role.includes("HOD") && <TableHead className="w-[10%]">Section</TableHead>}
+                        <TableHead className="w-[15%]">Status</TableHead>
+                        <TableHead className="w-[15%]">Result</TableHead>
+                        <TableHead className="w-[10%]">Marks</TableHead>
+                        <TableHead className="w-[10%]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stageReviews.map((review) => (
+                        <TableRow key={review.id}>
+                          <TableCell className="font-medium">
+                            {review.team_lead_name ||
+                              review.team_name ||
+                              `Team ID: ${review.team_id.substring(0, 8)}...`}
+                          </TableCell>
+                          <TableCell>{review.department}</TableCell>
+                          {user?.role.includes("HOD") && <TableCell>{review.team_section || "N/A"}</TableCell>}
+                          <TableCell>
+                            {review.is_completed ? (
+                              <Badge className="flex items-center gap-1 w-fit">
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Completed</span>
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                                <Clock className="h-3 w-3" />
+                                <span>Pending</span>
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {review.result ? (
+                              review.result
+                            ) : (
+                              <span className="text-muted-foreground italic">Not evaluated</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {review.marks !== null ? (
+                              `${review.marks}/100`
+                            ) : (
+                              <span className="text-muted-foreground italic">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {canEvaluateReviews && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8"
+                                onClick={() => handleOpenUpdateDialog(review)}
+                              >
+                                <FileText className="h-4 w-4 mr-1" />
+                                {review.is_completed ? "Update" : "Evaluate"}
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+
+                <TabsContent value="templates">
+                  <TemplatesList
+                    reviewStage={stage}
+                    canUpload={canUploadTemplates}
+                    onUploadClick={() => openUploadDialog(stage)}
+                    key={`${stage}-${refreshTemplates}`}
+                  />
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         ))
@@ -465,6 +518,14 @@ export function ReviewsView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Template Upload Dialog */}
+      <TemplateUpload
+        isOpen={isUploadDialogOpen}
+        onClose={() => setIsUploadDialogOpen(false)}
+        reviewStage={currentStage}
+        onSuccess={handleTemplateUploadSuccess}
+      />
     </>
   )
 }

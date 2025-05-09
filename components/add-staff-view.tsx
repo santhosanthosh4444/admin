@@ -45,7 +45,7 @@ const DOMAINS = [
   "Computer Vision",
 ]
 
-interface StaffCredentials {
+export interface StaffCredentials {
   name: string
   email: string
   password: string

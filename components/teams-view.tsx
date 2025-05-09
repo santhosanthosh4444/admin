@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { AlertCircle, CheckCircle2, UserPlus, Check, X, Info } from "lucide-react"
+import { AlertCircle, CheckCircle2, UserPlus, Check, X, Info, Star } from "lucide-react"
 import { toast } from "react-hot-toast"
 import { TeamDetailsModal } from "@/components/team-details-modal"
 
@@ -15,6 +15,7 @@ interface Team {
   id: number
   team_id: string
   topic: string | null
+  theme: string | null // Added theme field
   current_status: string | null
   is_approved: boolean | null
   code: string | null
@@ -34,6 +35,7 @@ interface Staff {
   role: string | null
   department: string | null
   section: string | null
+  domain: string | null // Added domain field
   team_count: number
 }
 
@@ -85,6 +87,7 @@ export function TeamsView() {
         throw new Error("Failed to fetch teams")
       }
       const data = await response.json()
+      console.log("Teams data:", data.teams) // Debug log
       setTeams(data.teams)
     } catch (error) {
       console.error("Error fetching teams:", error)
@@ -102,11 +105,33 @@ export function TeamsView() {
         throw new Error("Failed to fetch available staff")
       }
       const data = await response.json()
+      console.log("Available staff:", data.staff) // Debug log
       setAvailableStaff(data.staff)
     } catch (error) {
       console.error("Error fetching available staff:", error)
       toast.error("Failed to load available staff")
     }
+  }
+
+  // Check if a mentor's domain matches the team's theme
+  const isDomainMatch = (staffDomain: string | null, teamTheme: string | null) => {
+    if (!staffDomain || !teamTheme) return false
+
+    // Convert both to lowercase for case-insensitive comparison
+    const domain = staffDomain.toLowerCase()
+    const theme = teamTheme.toLowerCase()
+
+    // Check for exact match or partial match
+    return (
+      domain === theme ||
+      domain.includes(theme) ||
+      theme.includes(domain) ||
+      (domain.includes("web") && theme.includes("web")) ||
+      (domain.includes("ai") && (theme.includes("ai") || theme.includes("ml"))) ||
+      (domain.includes("machine learning") && theme.includes("ai")) ||
+      (domain.includes("data") && theme.includes("analytics")) ||
+      (domain.includes("mobile") && theme.includes("app"))
+    )
   }
 
   // Handle opening the assign mentor dialog
@@ -195,6 +220,20 @@ export function TeamsView() {
   // Check if user can approve/reject teams (HOD only)
   const canApproveTeams = user && user.role === "HOD"
 
+  // Sort staff by domain match with the selected team's theme
+  const getSortedStaff = () => {
+    if (!selectedTeam || !selectedTeam.theme) return availableStaff
+
+    return [...availableStaff].sort((a, b) => {
+      const aMatch = isDomainMatch(a.domain, selectedTeam.theme)
+      const bMatch = isDomainMatch(b.domain, selectedTeam.theme)
+
+      if (aMatch && !bMatch) return -1
+      if (!aMatch && bMatch) return 1
+      return 0
+    })
+  }
+
   return (
     <>
       <div className="mb-8">
@@ -240,6 +279,8 @@ export function TeamsView() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[20%]">Topic</TableHead>
+                    <TableHead className="w-[10%]">Theme</TableHead>
                     <TableHead className="w-[10%]">Code</TableHead>
                     {(user?.role === "HOD" || user?.role === "CLASS_ADVISOR") && (
                       <>
@@ -251,11 +292,13 @@ export function TeamsView() {
                     <TableHead className="w-[15%]">Team Lead</TableHead>
                     <TableHead className="w-[15%]">Mentor</TableHead>
                     <TableHead className="w-[15%]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {teams.map((team) => (
                     <TableRow key={team.team_id}>
+                      <TableCell className="font-medium">{team.topic || "No topic"}</TableCell>
+                      <TableCell>{team.theme || "N/A"}</TableCell>
                       <TableCell>{team.code || "N/A"}</TableCell>
                       {(user?.role === "HOD" || user?.role === "CLASS_ADVISOR") && (
                         <>
@@ -287,7 +330,7 @@ export function TeamsView() {
                           >
                             <Info className="h-4 w-4" />
                           </Button>
-                          
+
                           {canApproveTeams && team.is_approved === null && (
                             <>
                               <Button
@@ -336,12 +379,17 @@ export function TeamsView() {
 
       {/* Assign Mentor Dialog */}
       <Dialog open={isAssignMentorDialogOpen} onOpenChange={setIsAssignMentorDialogOpen}>
-        <DialogContent className="sm:max-w-md:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Assign Mentor</DialogTitle>
             <DialogDescription>
               Select a staff member to assign as mentor for{" "}
-              <span className="font-medium">{selectedTeam?.topic || "this team"}</span>.
+              <span className="font-medium">{selectedTeam?.topic || "this team"}</span>
+              {selectedTeam?.theme && (
+                <span className="block mt-1">
+                  Team Theme: <span className="font-medium">{selectedTeam.theme}</span>
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -355,60 +403,88 @@ export function TeamsView() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                {availableStaff.map((staff) => (
-                  <Card key={staff.staff_id} className="p-3 hover:bg-muted/50 cursor-pointer transition-colors">
-                    <div
-                      className="flex justify-between items-center"
-                      onClick={() => !isAssigningMentor && handleAssignMentor(staff)}
-                    >
-                      <div>
-                        <h4 className="font-medium">{staff.name || staff.email}</h4>
-                        <div className="flex gap-2 text-sm text-muted-foreground">
-                          <span>{staff.role}</span>
-                          {staff.department && (
-                            <>
-                              <span>•</span>
-                              <span>{staff.department}</span>
-                            </>
-                          )}
-                          {staff.section && (
-                            <>
-                              <span>•</span>
-                              <span>Section {staff.section}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{staff.team_count} / 2 teams</Badge>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="rounded-full p-0 w-8 h-8"
-                          disabled={isAssigningMentor}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleAssignMentor(staff)
-                          }}
+              <>
+                {selectedTeam?.theme && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                    <p className="text-sm text-amber-800">
+                      <Star className="inline-block h-4 w-4 mr-1 mb-1" />
+                      Mentors with domain expertise matching this team's theme are recommended and highlighted below.
+                    </p>
+                  </div>
+                )}
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                  {getSortedStaff().map((staff) => {
+                    const isRecommended = isDomainMatch(staff.domain, selectedTeam?.theme || null)
+                    return (
+                      <Card
+                        key={staff.staff_id}
+                        className={`p-3 hover:bg-muted/50 cursor-pointer transition-colors ${
+                          isRecommended ? "border-amber-300 bg-amber-50" : ""
+                        }`}
+                      >
+                        <div
+                          className="flex justify-between items-center"
+                          onClick={() => !isAssigningMentor && handleAssignMentor(staff)}
                         >
-                          <CheckCircle2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{staff.name || staff.email}</h4>
+                              {isRecommended && <Badge className="bg-amber-500 hover:bg-amber-600">Recommended</Badge>}
+                            </div>
+                            <div className="flex gap-2 text-sm text-muted-foreground">
+                              <span>{staff.role}</span>
+                              {staff.department && (
+                                <>
+                                  <span>•</span>
+                                  <span>{staff.department}</span>
+                                </>
+                              )}
+                              {staff.section && (
+                                <>
+                                  <span>•</span>
+                                  <span>Section {staff.section}</span>
+                                </>
+                              )}
+                            </div>
+                            {staff.domain && (
+                              <div className="mt-1">
+                                <span className="text-xs px-2 py-1 bg-gray-100 rounded-full">
+                                  Domain: {staff.domain}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{staff.team_count} / 2 teams</Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="rounded-full p-0 w-8 h-8"
+                              disabled={isAssigningMentor}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleAssignMentor(staff)
+                              }}
+                            >
+                              <CheckCircle2 className="h-5 w-5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </>
             )}
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Team Details Modal */}
-      <TeamDetailsModal 
-        isOpen={isDetailsModalOpen} 
-        onClose={() => setIsDetailsModalOpen(false)} 
-        teamId={selectedTeamId} 
+      <TeamDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        teamId={selectedTeamId}
       />
     </>
   )

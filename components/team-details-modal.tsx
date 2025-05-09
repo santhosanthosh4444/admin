@@ -19,7 +19,7 @@ interface TeamDetails {
   team: {
     id: number
     team_id: string
-    topic: string | null
+    theme: string | null
     current_status: string | null
     is_approved: boolean | null
     code: string | null
@@ -187,7 +187,7 @@ export function TeamDetailsModal({ isOpen, onClose, teamId }: TeamDetailsModalPr
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center gap-2">
             <Users className="h-5 w-5" />
-            {team.topic || "Team"} {team.code && <span className="text-muted-foreground">({team.code})</span>}
+            {team.theme || "Team"} {team.code && <span className="text-muted-foreground">({team.code})</span>}
           </DialogTitle>
           <DialogDescription>
             {team.department} Department {team.section && `• Section ${team.section}`} •{" "}
@@ -217,8 +217,8 @@ export function TeamDetailsModal({ isOpen, onClose, teamId }: TeamDetailsModalPr
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Topic</p>
-                    <p>{team.topic || "Not specified"}</p>
+                    <p className="text-sm font-medium text-muted-foreground">Theme</p>
+                    <p>{team.theme || "Not specified"}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Team Code</p>

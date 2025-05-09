@@ -22,24 +22,48 @@ import { Copy, Check } from "lucide-react"
 // Constants
 const DEPARTMENTS = ["CSE", "ECE", "IT", "MECH", "CSBS", "AIDS"]
 const SECTIONS = ["A", "B"]
+const DOMAINS = [
+  "Web Development",
+  "Mobile App Development",
+  "Artificial Intelligence",
+  "Machine Learning",
+  "Data Science",
+  "Cloud Computing",
+  "Cybersecurity",
+  "IoT",
+  "Blockchain",
+  "AR/VR",
+  "Robotics",
+  "Embedded Systems",
+  "Network Security",
+  "Database Management",
+  "DevOps",
+  "UI/UX Design",
+  "Game Development",
+  "Big Data Analytics",
+  "Natural Language Processing",
+  "Computer Vision",
+]
 
-export interface StaffCredentials {
+interface StaffCredentials {
   name: string
   email: string
   password: string
   role: string
   department?: string | null
   section?: string | null
+  domain?: string | null
 }
 
 export function AddStaffView() {
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false)
   const [credentials, setCredentials] = useState<StaffCredentials | null>(null)
-  const [email, setEmail] = useState("")
   const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
   const [role, setRole] = useState("")
   const [department, setDepartment] = useState("")
   const [section, setSection] = useState("")
+  const [domain, setDomain] = useState("")
   const [isAddingStaff, setIsAddingStaff] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -67,19 +91,25 @@ export function AddStaffView() {
     e.preventDefault()
 
     // Basic validation
-    if (!email || !role) {
+    if (!name || !email || !role) {
       toast.error("Please fill in all required fields")
       return
     }
 
     // Role-specific validation
-    if (role === "HOD" && !department) {
+    if (role.includes("HOD") && !department) {
       toast.error("Please select a department")
       return
     }
 
-    if (role === "CLASS_ADVISOR" && (!department || !section)) {
+    if (role.includes("CLASS_ADVISOR") && (!department || !section)) {
       toast.error("Please select both department and section")
+      return
+    }
+
+    // Domain validation for PROJECT_MENTOR
+    if (role.includes("PROJECT_MENTOR") && !domain) {
+      toast.error("Please select a domain for the project mentor")
       return
     }
 
@@ -96,11 +126,13 @@ export function AddStaffView() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          name,
           email,
           password: generatedPassword,
           role,
-          department: ["HOD", "CLASS_ADVISOR"].includes(role) ? department : null,
-          section: role === "CLASS_ADVISOR" ? section : null,
+          department: role.includes("HOD") || role.includes("CLASS_ADVISOR") ? department : null,
+          section: role.includes("CLASS_ADVISOR") ? section : null,
+          domain, // Always include domain
           ie_allocated: false, // Default value
         }),
       })
@@ -119,16 +151,19 @@ export function AddStaffView() {
         email,
         password: generatedPassword,
         role,
-        department: ["HOD", "CLASS_ADVISOR"].includes(role) ? department : null,
-        section: role === "CLASS_ADVISOR" ? section : null,
+        department: role.includes("HOD") || role.includes("CLASS_ADVISOR") ? department : null,
+        section: role.includes("CLASS_ADVISOR") ? section : null,
+        domain, // Include domain in credentials
       })
       setIsAddStaffDialogOpen(true)
 
       // Reset the form
+      setName("")
       setEmail("")
       setRole("")
       setDepartment("")
       setSection("")
+      setDomain("")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "An error occurred")
     } finally {
@@ -140,11 +175,13 @@ export function AddStaffView() {
     if (!credentials) return
 
     const text = `
+Name: ${credentials.name}
 Email: ${credentials.email}
 Password: ${credentials.password}
 Role: ${credentials.role}
 ${credentials.department ? `Department: ${credentials.department}` : ""}
 ${credentials.section ? `Section: ${credentials.section}` : ""}
+${credentials.domain ? `Domain: ${credentials.domain}` : ""}
     `.trim()
 
     navigator.clipboard.writeText(text).then(() => {
@@ -154,10 +191,10 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
   }
 
   // Determine if department field should be shown
-  const showDepartment = role === "HOD" || role === "CLASS_ADVISOR"
+  const showDepartment = role.includes("HOD") || role.includes("CLASS_ADVISOR")
 
   // Determine if section field should be shown
-  const showSection = role === "CLASS_ADVISOR"
+  const showSection = role.includes("CLASS_ADVISOR")
 
   return (
     <>
@@ -176,18 +213,19 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAddStaffSubmit} className="space-y-6">
-            <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
                 <Input
                   id="name"
-                  type="name"
-                  placeholder="Mr. John Doe"
+                  type="text"
+                  placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isAddingStaff}
                   required
                 />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -211,6 +249,8 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
                     <SelectItem value="PROJECT_MENTOR">Project Mentor</SelectItem>
                     <SelectItem value="CLASS_ADVISOR">Class Advisor</SelectItem>
                     <SelectItem value="HOD">Head of Department</SelectItem>
+                    <SelectItem value="HOD+PROJECT_MENTOR">HOD + Project Mentor</SelectItem>
+                    <SelectItem value="CLASS_ADVISOR+PROJECT_MENTOR">Class Advisor + Project Mentor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -251,6 +291,30 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
                 </div>
               )}
 
+              <div className="space-y-2">
+                <Label htmlFor="domain">Domain Expertise</Label>
+                <Select
+                  value={domain}
+                  onValueChange={setDomain}
+                  disabled={isAddingStaff}
+                  required={role.includes("PROJECT_MENTOR")}
+                >
+                  <SelectTrigger id="domain">
+                    <SelectValue placeholder="Select a domain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DOMAINS.map((dom) => (
+                      <SelectItem key={dom} value={dom}>
+                        {dom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {role.includes("PROJECT_MENTOR") && (
+                  <p className="text-xs text-muted-foreground mt-1">Required for Project Mentors</p>
+                )}
+              </div>
+
               <Button type="submit" className="w-full" disabled={isAddingStaff}>
                 {isAddingStaff ? "Creating..." : "Create Staff Account"}
               </Button>
@@ -265,9 +329,9 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <h3 className="font-medium">1. Enter Email</h3>
+              <h3 className="font-medium">1. Enter Personal Details</h3>
               <p className="text-sm text-muted-foreground">
-                Provide the staff member's email address. This will be used as their username.
+                Provide the staff member's full name and email address. The email will be used as their username.
               </p>
             </div>
             <div className="space-y-2">
@@ -277,6 +341,7 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
                 <li>PROJECT_MENTOR: For staff mentoring student projects</li>
                 <li>CLASS_ADVISOR: For staff serving as class advisors (requires department and section)</li>
                 <li>HOD: For Heads of Department (requires department)</li>
+                <li>Combined roles: Staff can have multiple roles (e.g., HOD + Project Mentor)</li>
               </ul>
             </div>
             <div className="space-y-2">
@@ -287,6 +352,7 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
               <ul className="list-disc list-inside text-sm text-muted-foreground">
                 <li>For HOD: Select the department they will head</li>
                 <li>For Class Advisor: Select both department and section they will advise</li>
+                <li>For Project Mentor: Select their domain expertise</li>
               </ul>
             </div>
             <div className="space-y-2">
@@ -312,6 +378,13 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
 
           {credentials && (
             <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <div className="flex items-center gap-2">
+                  <Input id="name" value={credentials.name} readOnly className="flex-1" />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email (Username)</Label>
                 <div className="flex items-center gap-2">
@@ -347,6 +420,15 @@ ${credentials.section ? `Section: ${credentials.section}` : ""}
                   <Label htmlFor="section">Section</Label>
                   <div className="flex items-center gap-2">
                     <Input id="section" value={credentials.section} readOnly className="flex-1" />
+                  </div>
+                </div>
+              )}
+
+              {credentials.domain && (
+                <div className="space-y-2">
+                  <Label htmlFor="domain">Domain Expertise</Label>
+                  <div className="flex items-center gap-2">
+                    <Input id="domain" value={credentials.domain} readOnly className="flex-1" />
                   </div>
                 </div>
               )}

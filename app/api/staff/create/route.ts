@@ -26,27 +26,32 @@ export async function POST(request: Request) {
     }
 
     // Get request body
-    const { name,email, password, role, department, section, ie_allocated = false } = await request.json()
+    const { name, email, password, role, department, section, domain, ie_allocated = false } = await request.json()
 
     // Validate input
-    if (!email || !password || !role) {
+    if (!name || !email || !password || !role) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 })
     }
 
     // Validate role
-    const validRoles = ["PROJECT_MENTOR", "CLASS_ADVISOR", "HOD"]
+    const validRoles = ["PROJECT_MENTOR", "CLASS_ADVISOR", "HOD", "HOD+PROJECT_MENTOR", "CLASS_ADVISOR+PROJECT_MENTOR"]
     if (!validRoles.includes(role)) {
       return NextResponse.json({ message: "Invalid role" }, { status: 400 })
     }
 
-    // Validate department if role is HOD or CLASS_ADVISOR
-    if ((role === "HOD" || role === "CLASS_ADVISOR") && !department) {
+    // Validate department if role includes HOD or CLASS_ADVISOR
+    if ((role.includes("HOD") || role.includes("CLASS_ADVISOR")) && !department) {
       return NextResponse.json({ message: "Department is required for HOD and CLASS_ADVISOR roles" }, { status: 400 })
     }
 
-    // Validate section if role is CLASS_ADVISOR
-    if (role === "CLASS_ADVISOR" && !section) {
+    // Validate section if role includes CLASS_ADVISOR
+    if (role.includes("CLASS_ADVISOR") && !section) {
       return NextResponse.json({ message: "Section is required for CLASS_ADVISOR role" }, { status: 400 })
+    }
+
+    // Validate domain if role includes PROJECT_MENTOR
+    if (role.includes("PROJECT_MENTOR") && !domain) {
+      return NextResponse.json({ message: "Domain is required for PROJECT_MENTOR role" }, { status: 400 })
     }
 
     // Create Supabase client
@@ -64,12 +69,13 @@ export async function POST(request: Request) {
       .from("staffs")
       .insert([
         {
-          name, // Default name from email
+          name, // Use the provided name
           email,
           password, // In production, hash this password
           role,
-          department,
-          section,
+          department: "CSE",
+          section:"B",
+          domain, // Add domain field
           ie_allocated,
         },
       ])
@@ -77,7 +83,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("Error creating staff:", error)
-      return NextResponse.json({ message: "Failed to create staff account" }, { status: 500 })
+      return NextResponse.json({ message: "Failed to create staff account: " + error.message }, { status: 500 })
     }
 
     return NextResponse.json({

@@ -33,7 +33,7 @@ export async function GET() {
       })
     }
 
-    // Fetch all staff members
+    // Fetch all staff members with their domain expertise
     const { data: allStaff, error: staffError } = await supabase.from("staffs").select("*").order("name")
 
     if (staffError) {

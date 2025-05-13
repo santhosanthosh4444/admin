@@ -6,78 +6,94 @@ import { cookies } from "next/headers"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     // Check if user is authenticated
-    const sessionCookie = (await cookies()).get("session")?.value
+    const cookieStore = await cookies()
+    const sessionCookie = cookieStore.get("session")?.value
     if (!sessionCookie) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
     }
 
-    // Get query parameters
-    const { searchParams } = new URL(request.url)
-    const mentorId = searchParams.get("mentorId")
+    // Parse session to get user info
+    let session
+    try {
+      session = JSON.parse(sessionCookie)
+    } catch (error) {
+      return NextResponse.json({ message: "Invalid session" }, { status: 401 })
+    }
+
+    // Extract user role, department, section, and staff ID
+    const { role, department, section, staffId } = session
 
     // Create Supabase client
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Parse the session cookie to get user info
-    const sessionData = JSON.parse(sessionCookie)
-    const userRole = sessionData.role
-    const userDepartment = sessionData.department
-    const userSection = sessionData.section
-    const userStaffId = sessionData.staff_id
+    // Base query to fetch teams
+    let query = supabase.from("teams").select("*")
 
-    // Base query
-    let query = supabase.from("teams").select(`
-      *,
-      students!teams_team_lead_fkey(name),
-      staffs!teams_mentor_fkey(name)
-    `)
-
-    // Apply filters based on user role
-    if (mentorId) {
-      // If mentorId is provided, filter by that
-      query = query.eq("mentor", mentorId)
-    } else if (userRole === "PROJECT_MENTOR") {
-      // Project mentors can only see teams they are mentoring
-      query = query.eq("mentor", userStaffId)
-    } else if (userRole === "CLASS_ADVISOR") {
-      // Class advisors can see teams in their department and section
-      query = query.eq("department", userDepartment).eq("section", userSection)
-    } else if (userRole === "HOD") {
-      // HODs can see all teams in their department
-      query = query.eq("department", userDepartment)
+    // Apply role-based filtering
+    if (role === "HOD") {
+      // HOD can see all teams in their department
+      if (department) {
+        query = query.eq("department", department)
+      }
+    } else if (role === "CLASS_ADVISOR") {
+      // Class Advisor can see teams in their department and section
+      if (department && section) {
+        query = query.eq("department", department).eq("section", section)
+      } else if (department) {
+        query = query.eq("department", department)
+      }
+    } else if (role === "PROJECT_MENTOR") {
+      // Project Mentor can only see teams they are mentoring
+      if (staffId) {
+        query = query.eq("mentor", staffId)
+      }
     }
 
     // Execute the query
-    const { data, error } = await query
+    const { data: teams, error } = await query.order("created_at", { ascending: false })
 
     if (error) {
       console.error("Error fetching teams:", error)
       return NextResponse.json({ message: "Failed to fetch teams" }, { status: 500 })
     }
 
-    // Process the data to extract team lead and mentor names
-    const processedTeams = data.map((team) => {
-      // Extract team lead name
-      const teamLeadName = team.students?.length > 0 ? team.students[0].name : null
+    // Fetch mentor names and team lead names separately
+    const transformedTeams = await Promise.all(
+      teams.map(async (team) => {
+        let mentorName = null
+        let teamLeadName = null
 
-      // Extract mentor name
-      const mentorName = team.staffs?.length > 0 ? team.staffs[0].name : null
+        // Fetch mentor name if mentor exists
+        if (team.mentor) {
+          const { data: mentorData } = await supabase.from("staffs").select("name").eq("staff_id", team.mentor).single()
 
-      // Return processed team
-      return {
-        ...team,
-        team_lead_name: teamLeadName,
-        mentor_name: mentorName,
-        students: undefined, // Remove the nested objects
-        staffs: undefined,
-      }
-    })
+          mentorName = mentorData?.name || null
+        }
+
+        // Fetch team lead name if team lead exists
+        if (team.team_lead) {
+          const { data: studentData } = await supabase
+            .from("students")
+            .select("name")
+            .eq("student_id", team.team_lead)
+            .single()
+
+          teamLeadName = studentData?.name || null
+        }
+
+        return {
+          ...team,
+          mentor_name: mentorName,
+          team_lead_name: teamLeadName,
+        }
+      }),
+    )
 
     return NextResponse.json({
-      teams: processedTeams,
+      teams: transformedTeams,
     })
   } catch (error) {
     console.error("Error in teams API:", error)

@@ -279,7 +279,6 @@ export function TeamsView() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[20%]">Topic</TableHead>
                     <TableHead className="w-[10%]">Theme</TableHead>
                     <TableHead className="w-[10%]">Code</TableHead>
                     {(user?.role === "HOD" || user?.role === "CLASS_ADVISOR") && (
@@ -297,7 +296,6 @@ export function TeamsView() {
                 <TableBody>
                   {teams.map((team) => (
                     <TableRow key={team.team_id}>
-                      <TableCell className="font-medium">{team.topic || "No topic"}</TableCell>
                       <TableCell>{team.theme || "N/A"}</TableCell>
                       <TableCell>{team.code || "N/A"}</TableCell>
                       {(user?.role === "HOD" || user?.role === "CLASS_ADVISOR") && (

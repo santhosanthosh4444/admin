@@ -66,7 +66,7 @@ export async function GET() {
         ),
         teams:team_id (
           team_id,
-          topic,
+          theme,
           code
         )
       `)
